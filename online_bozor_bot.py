@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import os
 
-TOKEN = "8206312796:AAHh-o11bNKUmAFnGQlj2QlnLCRSlBZ9uTY"
+TOKEN = "ВАШ_ТОКЕН"
 OPERATOR_ID = 7740882890
 
 bot = telebot.TeleBot(TOKEN)
@@ -10,6 +10,39 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 user_cart = {}
 user_data = {}
+user_lang = {}
+
+# 🌍 переводы (ТОЛЬКО RU + UZ)
+TEXTS = {
+    "ru": {
+        "welcome": "👋 Добро пожаловать в ONLINE BOZOR!",
+        "catalog": "Каталог 🛒",
+        "orders": "Мои заказы 📦",
+        "choose_category": "Выберите категорию:",
+        "drinks": "Напитки 🥤",
+        "products": "Продукты 🛒",
+        "cart_empty": "🛒 Корзина пуста",
+        "checkout": "Оформить заказ ✅",
+        "enter_phone": "📞 Введите номер:",
+        "enter_address": "📍 Введите адрес:",
+        "order_done": "✅ Заказ отправлен!",
+        "delete": "❌ Удалить"
+    },
+    "uz": {
+        "welcome": "👋 ONLINE BOZOR ga xush kelibsiz!",
+        "catalog": "Katalog 🛒",
+        "orders": "Buyurtmalar 📦",
+        "choose_category": "Kategoriya tanlang:",
+        "drinks": "Ichimliklar 🥤",
+        "products": "Mahsulotlar 🛒",
+        "cart_empty": "🛒 Savat bo‘sh",
+        "checkout": "Buyurtma berish ✅",
+        "enter_phone": "📞 Telefon kiriting:",
+        "enter_address": "📍 Manzil kiriting:",
+        "order_done": "✅ Buyurtma yuborildi!",
+        "delete": "❌ O‘chirish"
+    }
+}
 
 # 💰 цены
 PRICES = {
@@ -17,8 +50,8 @@ PRICES = {
     "1 L": 14000,
     "1.5 L": 15000,
     "energy": 12000,
-    "oil": 20000,
-    "flour": 15000
+    "oil": 8000,
+    "flour": 25000
 }
 
 # 🥤 напитки
@@ -60,97 +93,74 @@ products = {
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.row("Каталог 🛒", "Мои заказы 📦")
-    bot.send_message(message.chat.id, "👋 Добро пожаловать в ONLINE BOZOR!", reply_markup=markup)
+    markup.row("🇷🇺 Русский", "🇺🇿 O‘zbek")
+    bot.send_message(message.chat.id, "🌍 Выберите язык:", reply_markup=markup)
+
+# 🌍 язык
+@bot.message_handler(func=lambda m: m.text in ["🇷🇺 Русский", "🇺🇿 O‘zbek"])
+def set_lang(message):
+    user_lang[message.chat.id] = "ru" if "Русский" in message.text else "uz"
+    t = TEXTS[user_lang[message.chat.id]]
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row(t["catalog"], t["orders"])
+
+    bot.send_message(message.chat.id, t["welcome"], reply_markup=markup)
 
 # 📋 меню
 @bot.message_handler(content_types=['text'])
 def main_menu(message):
-    if message.text == "Каталог 🛒":
-        catalog_menu(message)
-    elif message.text == "Мои заказы 📦":
+    lang = user_lang.get(message.chat.id, "ru")
+    t = TEXTS[lang]
+
+    if message.text == t["catalog"]:
+        catalog_menu(message, t)
+    elif message.text == t["orders"]:
         show_cart(message)
 
 # 📂 каталог
-def catalog_menu(message):
+def catalog_menu(message, t):
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Напитки 🥤", callback_data="drinks"))
-    markup.add(types.InlineKeyboardButton("Продукты 🛒", callback_data="products"))
-    bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
+    markup.add(types.InlineKeyboardButton(t["drinks"], callback_data="drinks"))
+    markup.add(types.InlineKeyboardButton(t["products"], callback_data="products"))
+    bot.send_message(message.chat.id, t["choose_category"], reply_markup=markup)
 
-# 🥤 напитки (С ЦЕНАМИ!)
-def show_drinks(chat_id):
-    for drink, data in drinks.items():
-        markup = types.InlineKeyboardMarkup()
-
-        if isinstance(data, dict):
-            text = f"{drink}\n"
-            for size in data:
-                price = PRICES[size]
-                text += f"\n{size} — {price} сум"
-                markup.add(types.InlineKeyboardButton(f"{size} ➕", callback_data=f"add|{drink}|{size}"))
-
-            photo = list(data.values())[0]
-
-        else:
-            price = PRICES["energy"]
-            text = f"{drink}\n\n💰 {price} сум"
-            markup.add(types.InlineKeyboardButton("Добавить ➕", callback_data=f"add|{drink}"))
-            photo = data
-
-        try:
-            with open(os.path.join(BASE_DIR, photo), "rb") as img:
-                bot.send_photo(chat_id, img, caption=text, reply_markup=markup)
-        except:
-            bot.send_message(chat_id, text, reply_markup=markup)
-
-# 🛢️ продукты
-def show_products(chat_id):
-    for name, (photo, key) in products.items():
-        price = PRICES[key]
-
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Добавить ➕", callback_data=f"add_product|{name}"))
-
-        text = f"{name}\n\n💰 {price} сум"
-
-        try:
-            with open(os.path.join(BASE_DIR, photo), "rb") as img:
-                bot.send_photo(chat_id, img, caption=text, reply_markup=markup)
-        except:
-            bot.send_message(chat_id, text, reply_markup=markup)
-
-# 🛒 корзина
+# 🛒 корзина с удалением
 def show_cart(message):
-    cart = user_cart.get(message.chat.id, [])
+    chat_id = message.chat.id
+    lang = user_lang.get(chat_id, "ru")
+    t = TEXTS[lang]
+
+    cart = user_cart.get(chat_id, [])
 
     if not cart:
-        bot.send_message(message.chat.id, "🛒 Корзина пуста")
+        bot.send_message(chat_id, t["cart_empty"])
         return
 
     total = 0
-    text = "🛒 Ваш заказ:\n\n"
-
-    for item, price in cart:
-        text += f"• {item} — {price} сум\n"
-        total += price
-
-    text += f"\n💰 Итого: {total} сум"
-
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Оформить заказ ✅", callback_data="checkout"))
 
-    bot.send_message(message.chat.id, text, reply_markup=markup)
+    text = "🛒:\n\n"
+    for i, (item, price) in enumerate(cart):
+        text += f"{i+1}. {item} — {price} сум\n"
+        total += price
+        markup.add(types.InlineKeyboardButton(f"{t['delete']} {i+1}", callback_data=f"remove|{i}"))
+
+    text += f"\n💰 {total} сум"
+    markup.add(types.InlineKeyboardButton(t["checkout"], callback_data="checkout"))
+
+    bot.send_message(chat_id, text, reply_markup=markup)
 
 # 🔘 кнопки
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
+    chat_id = call.message.chat.id
 
     if call.data == "drinks":
-        show_drinks(call.message.chat.id)
+        show_drinks(chat_id)
 
     elif call.data == "products":
-        show_products(call.message.chat.id)
+        show_products(chat_id)
 
     elif call.data.startswith("add|"):
         parts = call.data.split("|")
@@ -163,25 +173,31 @@ def callback(call):
         else:
             price = PRICES["energy"]
 
-        user_cart.setdefault(call.message.chat.id, []).append((item, price))
-        bot.answer_callback_query(call.id, f"{item} добавлен ✅")
+        user_cart.setdefault(chat_id, []).append((item, price))
+        bot.answer_callback_query(call.id, "Добавлено ✅")
 
     elif call.data.startswith("add_product"):
         name = call.data.split("|")[1]
         key = products[name][1]
         price = PRICES[key]
 
-        user_cart.setdefault(call.message.chat.id, []).append((name, price))
-        bot.answer_callback_query(call.id, f"{name} добавлен ✅")
+        user_cart.setdefault(chat_id, []).append((name, price))
+        bot.answer_callback_query(call.id, "Добавлено ✅")
+
+    elif call.data.startswith("remove|"):
+        index = int(call.data.split("|")[1])
+        user_cart[chat_id].pop(index)
+        bot.answer_callback_query(call.id, "Удалено ❌")
+        show_cart(call.message)
 
     elif call.data == "checkout":
-        bot.send_message(call.message.chat.id, "📞 Введите номер:")
+        bot.send_message(chat_id, TEXTS[user_lang.get(chat_id, "ru")]["enter_phone"])
         bot.register_next_step_handler(call.message, get_phone)
 
 # 📞 телефон
 def get_phone(message):
     user_data[message.chat.id] = {"phone": message.text}
-    bot.send_message(message.chat.id, "📍 Введите адрес:")
+    bot.send_message(message.chat.id, TEXTS[user_lang.get(message.chat.id, "ru")]["enter_address"])
     bot.register_next_step_handler(message, get_address)
 
 # 📍 адрес
@@ -191,23 +207,58 @@ def get_address(message):
     cart = user_cart.get(message.chat.id, [])
     total = sum(price for _, price in cart)
 
-    text = "🛒 НОВЫЙ ЗАКАЗ\n\n"
-    text += f"👤 ID: {message.chat.id}\n"
+    text = f"🛒 Новый заказ\n\nID: {message.chat.id}\n"
     text += f"📞 {user_data[message.chat.id]['phone']}\n"
     text += f"📍 {user_data[message.chat.id]['address']}\n\n"
 
     for item, price in cart:
         text += f"• {item} — {price} сум\n"
 
-    text += f"\n💰 ИТОГО: {total} сум"
+    text += f"\n💰 {total} сум"
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("💬 Написать клиенту", url=f"tg://user?id={message.chat.id}"))
+    markup.add(types.InlineKeyboardButton("💬 Связаться", url=f"tg://user?id={message.chat.id}"))
 
     bot.send_message(OPERATOR_ID, text, reply_markup=markup)
-    bot.send_message(message.chat.id, "✅ Заказ отправлен!")
+    bot.send_message(message.chat.id, TEXTS[user_lang.get(message.chat.id, "ru")]["order_done"])
 
     user_cart[message.chat.id] = []
+
+# 🥤 напитки (оставь как у тебя)
+def show_drinks(chat_id):
+    for drink, data in drinks.items():
+        markup = types.InlineKeyboardMarkup()
+
+        if isinstance(data, dict):
+            text = f"{drink}\n"
+            for size in data:
+                text += f"\n{size} — {PRICES[size]} сум"
+                markup.add(types.InlineKeyboardButton(f"{size} ➕", callback_data=f"add|{drink}|{size}"))
+            photo = list(data.values())[0]
+        else:
+            text = f"{drink}\n💰 {PRICES['energy']} сум"
+            markup.add(types.InlineKeyboardButton("Добавить ➕", callback_data=f"add|{drink}"))
+            photo = data
+
+        try:
+            with open(os.path.join(BASE_DIR, photo), "rb") as img:
+                bot.send_photo(chat_id, img, caption=text, reply_markup=markup)
+        except:
+            bot.send_message(chat_id, text, reply_markup=markup)
+
+# 🛢️ продукты
+def show_products(chat_id):
+    for name, (photo, key) in products.items():
+        text = f"{name}\n💰 {PRICES[key]} сум"
+
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Добавить ➕", callback_data=f"add_product|{name}"))
+
+        try:
+            with open(os.path.join(BASE_DIR, photo), "rb") as img:
+                bot.send_photo(chat_id, img, caption=text, reply_markup=markup)
+        except:
+            bot.send_message(chat_id, text, reply_markup=markup)
 
 # 🚀 запуск
 bot.polling(none_stop=True)
