@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import os
 
-TOKEN = "TELEGRAM_BOT_TOKEN"
+TOKEN = "8206312796:AAHh-o11bNKUmAFnGQlj2QlnLCRSlBZ9uTY"
 OPERATOR_ID = 7740882890
 
 bot = telebot.TeleBot(TOKEN)
