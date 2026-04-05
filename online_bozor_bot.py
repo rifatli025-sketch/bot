@@ -3,7 +3,7 @@ from telebot import types
 import os
 
 TOKEN = "ВАШ_ТОКЕН"
-OPERATOR_ID = 7740882890
+OPERATOR_ID = 418034107
 
 bot = telebot.TeleBot(TOKEN)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
