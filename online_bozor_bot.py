@@ -261,4 +261,4 @@ def show_products(chat_id):
             bot.send_message(chat_id, text, reply_markup=markup)
 
 # 🚀 запуск
-bot.polling(none_stop=True)
+bot.infinity_polling()
