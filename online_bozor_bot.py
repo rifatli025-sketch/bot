@@ -259,6 +259,23 @@ def show_products(chat_id):
                 bot.send_photo(chat_id, img, caption=text, reply_markup=markup)
         except:
             bot.send_message(chat_id, text, reply_markup=markup)
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+keep_alive()
 
 # 🚀 запуск
 bot.infinity_polling()
